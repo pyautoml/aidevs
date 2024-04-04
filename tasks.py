@@ -211,7 +211,7 @@ class Task:
         except Exception as e:
             raise Exception(f"Error task 'functions': {e}")
 
-    def task_whoami(self, prompt: str = "Hawaiian pizza") -> None:
+    def task_whoami(self) -> None:
         """
         Task name: whoami
         Expected CLI output: Message: OK Status: CORRECT
