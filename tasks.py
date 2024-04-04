@@ -241,7 +241,7 @@ class Task:
         try:
             token = self.get_task_token(task_name="rodo")
             self.get_task(token=token)
-            answer = r"Use placeholders %imie%, %nazwisko%, %zawod%, %miasto% to replace confident data: name, surname, profession, city/town. Answer the question: Tell me everything about yourself."
+            answer = r"Use placeholders %imie%, %nazwisko%, %zawod%, %miasto% to replace confident data: name, surname, profession, city/town. Answer the question: Tell me everything about yourself. Change all names, cities, etc. for placeholders before returning answer."
 
             if not printable:
                 return self.send_answer(token=token, payload={"answer": answer})
