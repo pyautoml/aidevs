@@ -158,36 +158,35 @@ class Task:
         except Exception as e:
             raise Exception(f"Error retrieving task token: {e}")
 
-    def send_answer(self, token: str, payload: dict) -> None:
+    def send_answer(self, token: str, payload: dict) -> dict:
         try:
             url = self.task_answer_endpoint + token
-            result = requests.post(url=url, json=payload).json()
-            print(f"Message: {result['msg']} Status: {result['note']}")
-        except KeyError as e:
-            raise KeyError(f"Missing 'msg' or 'note' keys in JSON response: {e}")
+            result = requests.post(url=url, json=payload)
+            return result.json()
         except Exception as e:
-            raise Exception(f"Error retrieving task token: {e}")
+            raise Exception(f"Error while retrieving task token: {e}")
 
     # tasks ---
-    def task_embedding(self, prompt: str = "Hawaiian pizza") -> None:
+    def task_embedding(self, prompt: str = "Hawaiian pizza", printable: bool = False) -> dict|None:
         """
         Task name: embedding
         Task payload hint: https://zadania.aidevs.pl/hint/embedding
-        Expected CLI output: Message: OK Status: CORRECT
         """
 
         try:
             token = self.get_task_token(task_name="embedding")
             self.get_task(token=token)
             embedding = self.openai.generate_embedding(message=prompt)
-            self.send_answer(token=token, payload={"answer": embedding})
+
+            if not printable:
+                return self.send_answer(token=token, payload={"answer": embedding})
+            print(self.send_answer(token=token, payload={"answer": embedding}))
         except Exception as e:
             raise Exception(f"Error task 'embedding': {e}")
 
-    def task_functions(self) -> None:
+    def task_functions(self, printable: bool = False) -> dict|None:
         """
         Task name: functions
-        Expected CLI output: Message: OK Status: CORRECT
         """
 
         try:
@@ -207,11 +206,14 @@ class Task:
 
             token = self.get_task_token(task_name="functions")
             self.get_task(token=token)
-            self.send_answer(token=token, payload={"answer": payload})
+
+            if not printable:
+                return self.send_answer(token=token, payload={"answer": payload})
+            print(self.send_answer(token=token, payload={"answer": payload}))
         except Exception as e:
             raise Exception(f"Error task 'functions': {e}")
 
-    def task_whoami(self) -> None:
+    def task_whoami(self, printable: bool = False, show_answer: bool = False) -> dict|None:
         """
         Task name: whoami
         Expected CLI output: Message: OK Status: CORRECT
@@ -222,7 +224,14 @@ class Task:
             task = self.get_task(token=token)
             prompt = f"Answer the question:'{task['hint']}' Knowing that: '{task['msg']}'. Return only answer without any comments."
             answer = self.openai.prompt(prompt=prompt)
-            self.send_answer(token=token, payload={"answer": answer})
+
+            if show_answer:
+                print(f"OpenAi answer: {answer}")
+            if not printable:
+                return self.send_answer(token=token, payload={"answer": answer})
+            print(self.send_answer(token=token, payload={"answer": answer}))
+        except KeyError as e:
+            raise KeyError(f"Missing 'hint' or 'msg' key: {e}")
         except Exception as e:
             raise Exception(f"Error task 'whoami': {e}")
 
@@ -231,9 +240,9 @@ def main():
     task = Task(settings_file="./configuration.json")
     open_ai = OpenAiConnector(settings_file="./configuration.json")
    
-    # task.task_embedding()
-    # task.task_functions()
-    # task.task_whoami()
+    # task.task_embedding(printable=True)
+    # task.task_functions(printable=True)
+    # ttask.task_whoami(printable=True, show_answer=True)
 
     del task
     del open_ai
