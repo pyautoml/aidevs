@@ -249,6 +249,44 @@ class Task:
         except Exception as e:
             raise Exception(f"Error task 'rodo': {e}")
 
+    def task_scraper(self, printable: bool = False, print_hints: bool = False, show_answer: bool = False) -> dict|None:
+        """ Task name: scraper """
+        try:
+            status = None
+            timeout = 10
+
+            token = self.get_task_token(task_name="scraper")
+            task_data = self.get_task(token=token)
+            question = task_data["question"]
+            url = task_data["input"]
+
+            while status != 200:
+                try:
+                    result = requests.get(url=url, headers=self.headers, timeout=timeout)
+                    status = result.status_code
+                except KeyboardInterrupt:
+                    exit()
+                except Exception as e:
+                    if str(e).endswith("Read timed out."):
+                        timeout += randint(5,10)
+                        if print_hints:
+                            print("New timeout: ", timeout, flush=True)
+                    else:
+                        if print_hints:
+                            print(f"Waiting reason: {e}\n")
+                        timeout = 10
+                        time.sleep(3)
+
+            answer = self.openai.prompt(prompt=f"Return answer of max 200 characters for the question <QUESTION>{question}</QUESTION> in POLISH language, based on provided <DATA>{result.text}</DATA>")
+
+            if show_answer:
+                print(f"OpenAi answer: {answer}")
+            if not printable:
+                return self.send_answer(token=token, payload={"answer": answer})
+            print(self.send_answer(token=token, payload={"answer": answer}))
+        except Exception as e:
+            raise Exception(f"Error task 'scraper': {e}")
+            
 
 def main():
     task = Task(settings_file="./configuration.json")
@@ -258,6 +296,7 @@ def main():
     # task.task_functions(printable=True)
     # ttask.task_whoami(printable=True, show_answer=True)
     # task.task_rodo(printable=True)
+    # task.task_scraper(printable=True, print_hints=True, show_answer=True)
 
     del task
     del open_ai
