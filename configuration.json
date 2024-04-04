@@ -1,0 +1,10 @@
+{
+    "openai_api_key": "",
+    "openai_organization_id": "",
+    "render_x_api_key": "",
+    "task_api_key": "",
+    "task_data": "https://tasks.aidevs.pl/data/",
+    "task_endpoint": "https://tasks.aidevs.pl/task/",
+    "task_token_endpoint": "https://tasks.aidevs.pl/token/",
+    "task_answer_endpoint": "https://tasks.aidevs.pl/answer/"
+}
