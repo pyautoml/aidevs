@@ -110,7 +110,6 @@ class Task:
         try:
             self.settings = self.load_json(settings_file)
             self.openai = OpenAiConnector(settings_file=settings_file)
-
             self.task_api_key = self.settings["task_api_key"]
             self.task_data = self.url_validator(self.settings["task_data"])
             self.task_endpoint = self.url_validator(self.settings["task_endpoint"])
@@ -120,6 +119,11 @@ class Task:
             self.task_answer_endpoint = self.url_validator(
                 self.settings["task_answer_endpoint"]
             )
+            self.form_headers = {"Content-Type": "application/x-www-form-urlencoded"}
+            self.headers = {
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
+            }
         except KeyError as e:
             raise KeyError(f"Missing key in settings: {e}")
         except Exception as e:
@@ -286,6 +290,39 @@ class Task:
             print(self.send_answer(token=token, payload={"answer": answer}))
         except Exception as e:
             raise Exception(f"Error task 'scraper': {e}")
+
+ def task_liar(
+        self,
+        question: str = "Is the sky blue?",
+        printable: bool = False,
+        show_task: bool = False,
+    ) -> None:
+        """ Task name: liar """
+
+        token = self.get_task_token(task_name="liar")
+        task = self.get_task(token=token)
+        if show_task:
+            print(f"Task instruction: {task}\n")
+            
+        result = requests.post(
+            self.task_endpoint + token,
+            headers=self.form_headers,
+            data=f"question={question}",
+        )
+        aidevs_answer = result.json()["answer"]
+        if show_task:
+            print(f"Task text: {aidevs_answer}\n")
+
+        prompt = f"Check if the text answers the question. Return only one value: YES or NO. <QUESTION>{question}</QUESTION> <TEXT>{aidevs_answer}</TEXT>"
+        answer = self.openai.prompt(prompt=prompt)
+        if show_task:
+            print(f"OpenAi answer: {answer}\n")
+            
+        post_answer = self.send_answer(token=token, payload={"answer": answer})
+        if printable:
+            print(f"Task endpoint message: {post_answer}")
+        else:
+            return post_answer
             
 
 def main():
@@ -297,6 +334,7 @@ def main():
     # ttask.task_whoami(printable=True, show_answer=True)
     # task.task_rodo(printable=True)
     # task.task_scraper(printable=True, print_hints=True, show_answer=True)
+    # task.task_liar(printable=True)
 
     del task
     del open_ai
