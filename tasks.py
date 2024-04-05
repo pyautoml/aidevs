@@ -136,6 +136,51 @@ class Task:
         except Exception as e:
             raise Exception(f"Error in reading JSON file: {e}")
 
+    def speech_to_text(self, file_path: str, model: str = "whisper-1") -> str:
+        try:
+            audio_file = open(file_path, "rb")
+            return self.openai._client.audio.transcriptions.create(
+                model=model, file=audio_file
+            ).text
+        except Exception as e:
+            raise Exception(f"Error in file transcription: {e}")
+
+    def download_mp3_file(
+        self,
+        url: str = "https://tasks.aidevs.pl/data/mateusz.mp3",
+        filename: str = "mateusz.mp3",
+        directory: str = "files",
+        return_file_path: str = False,
+    ) -> str | None:
+        mp3_directory = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), directory)
+        )
+
+        try:
+            if not os.path.exists(mp3_directory):
+                os.mkdir(mp3_directory, mode=0o777)
+                print("Directory created")
+        except Exception as e:
+            raise Exception(f"Error while creating local directory: {e}")
+
+        mp3_file = os.path.join(mp3_directory, filename)
+
+        try:
+            response = requests.get(url=url, stream=True)
+        except Exception as e:
+            raise Exception(f"MP3 request error: {e}")
+
+        try:
+            with open(mp3_file, "wb") as f:
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
+            print("File downloaded successfully.")
+            if return_file_path:
+                return mp3_file
+        except Exception as e:
+            raise Exception(f"Error saving mp3 file: {e}")
+
     def url_validator(self, url: str) -> str:
         try:
             if not url.endswith("/"):
@@ -296,7 +341,7 @@ class Task:
         question: str = "Is the sky blue?",
         printable: bool = False,
         show_task: bool = False,
-    ) -> None:
+    ) -> dict|None:
         """ Task name: liar """
 
         token = self.get_task_token(task_name="liar")
@@ -324,7 +369,35 @@ class Task:
         else:
             return post_answer
             
+    def task_whisper(
+        self, printable: bool = False, show_task: bool = False
+    ) -> dict | None:
+        """ Task name: whisper """
 
+        token = self.get_task_token(task_name="whisper")
+        task_data = self.get_task(token=token)
+        url = task_data["msg"].split(" ")[-1]
+
+        if show_task:
+            print(f"Url: {url}\n")
+
+        if not url.startswith("http"):
+            # then replace with a valid URL from 2024
+            url = "https://tasks.aidevs.pl/data/mateusz.mp3"
+
+        file_path = self.download_mp3_file(url=url, return_file_path=True)
+        transcription = self.speech_to_text(file_path=file_path)
+
+        if show_task:
+            print(f"Transcription: {transcription}\n")
+
+        answer = self.send_answer(token=token, payload={"answer": transcription})
+
+        if printable:
+            print(f"Answer: {answer}")
+        else:
+            return answer
+            
 def main():
     task = Task(settings_file="./configuration.json")
     open_ai = OpenAiConnector(settings_file="./configuration.json")
@@ -335,6 +408,7 @@ def main():
     # task.task_rodo(printable=True)
     # task.task_scraper(printable=True, print_hints=True, show_answer=True)
     # task.task_liar(printable=True)
+    # task.task_whisper(printable=True)
 
     del task
     del open_ai
