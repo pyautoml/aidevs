@@ -1,7 +1,7 @@
 #!/usr/bin/python3.11
 
 __created__ = "04.04.2024"
-__last_update__ = ""
+__last_update__ = "07.04.2024"
 __author__ = "https://github.com/pyautoml"
 __course__ = "https://bravecourses.circle.so"
 
