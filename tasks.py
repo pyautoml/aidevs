@@ -397,10 +397,92 @@ class Task:
             print(f"Answer: {answer}")
         else:
             return answer
+
+    def task_search(
+        self, 
+        model: ollama, 
+        percentage_treshold: int = 70,
+        printable: bool = False, 
+        directory: str = "files", 
+        show_task: bool = False
+    ) -> dict | None:
+        """
+        Task name: search
+        Hint: Answer should be an URL address.
+        """
+        
+        token = self.get_task_token(task_name="search")
+        task_data = self.get_task(token=token)
+
+        try:
+            data_url = task_data["msg"]
+            url = (data_url.split("-")[-1]).strip()
+            question = task_data["question"]
+        except KeyError as e:
+            raise KeyError(f"Missing key 'data': {e}")
+        
+        try:
+            response = requests.get(url=url, headers=self.headers)
+            json_data = response.json()
+
+            if not os.path.exists(f"{directory}/search.json"):
+                with open(f"{directory}/search.json", "w", encoding="utf-8") as file:
+                    json.dump(json_data, file, indent=4)
+                    print("File saved successfully")
+            else:
+                print("File already exists")
+        except Exception as e:
+            raise Exception(f"Error while downloading JSON file: {e}")
+        
+        
+        data = self.tools.load_custom_data(directory="./files/search.json")
+        vectorized_question = model.create_embedding(text=question)["embedding"]
+        embeddings = []
+        titles = []
+        urls = []
+        top_3 = {}
+
+        for row in data:
+            title = row["title"]
+            url = row["url"]
+            embeddings.append(model.create_embedding(text=title)["embedding"])
+            titles.append(title)
+            urls.append(url)
+        
+        vectorized_question = np.array(len(data) * [vectorized_question])
+        similarities = cosine_similarity(vectorized_question, np.array(embeddings))
+
+        del embeddings
+        del vectorized_question
+        gc.collect()
+        
+        for i, similarity in enumerate(similarities[0], start=0):
+            similarity_percentage = similarity * 100
+            if similarity_percentage > percentage_treshold:
+                top_3[urls[i]] = {
+                    "similarity": f"{similarity_percentage:.2f}"
+                }
+
+        del similarities
+        gc.collect()
+
+        final_url = max(top_3, key=top_3.get)
+        
+        if show_task:
+            print(f"Final url: {final_url}")
+            print(f"Question: {question}")
+
+        answer = self.send_answer(token=token, payload={"answer": final_url})
+
+        if printable:
+            print(answer)
+        else:
+            return answer     
             
 def main():
     task = Task(settings_file="./configuration.json")
     open_ai = OpenAiConnector(settings_file="./configuration.json")
+    model = OllamaModel(settings_file="./configuration.json")
    
     # task.task_embedding(printable=True)
     # task.task_functions(printable=True)
@@ -409,8 +491,10 @@ def main():
     # task.task_scraper(printable=True, print_hints=True, show_answer=True)
     # task.task_liar(printable=True)
     # task.task_whisper(printable=True)
+    # task.task_search(model=model, printable=True, show_task=True)
 
     del task
+    del model
     del open_ai
     gc.collect()
 
